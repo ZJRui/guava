@@ -60,6 +60,15 @@ public abstract class Equivalence<T> implements BiPredicate<@Nullable T, @Nullab
    *
    * <p>Note that all calls to {@code equivalent(x, y)} are expected to return the same result as
    * long as neither {@code x} nor {@code y} is modified.
+   *
+   *
+   * 如果给定的对象被认为是等效的，则返回 true。
+   * 此方法描述对象引用的等价关系，这意味着对于所有引用 x、y 和 z（其中任何一个都可能为空）：
+   * 等效（x，x）为真（自反属性）
+   * 等效（x，y）和等效（y，x）每个返回相同的结果（对称属性）
+   * 如果等价(x, y) 和等价(y, z) 都为真，那么等价(x, z) 也为真（传递性）
+   * 请注意，只要 x 和 y 均未修改，所有对等价物 (x, y) 的调用都应返回相同的结果。
+   *
    */
   public final boolean equivalent(@CheckForNull T a, @CheckForNull T b) {
     if (a == b) {

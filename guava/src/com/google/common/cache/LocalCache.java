@@ -2140,6 +2140,7 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
       try {
         // re-read ticker once inside the lock
         long now = map.ticker.read();
+        //清除引用队列，access队列和write队列中美过期的数据，这算是一次put操作
         preWriteCleanup(now);
 
         int newCount = this.count - 1;
@@ -2147,17 +2148,22 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         int index = hash & (table.length() - 1);
         ReferenceEntry<K, V> first = table.get(index);
 
+        // 定位目标元素
         for (e = first; e != null; e = e.getNext()) {
           K entryKey = e.getKey();
           if (e.getHash() == hash
               && entryKey != null
+                  //equivalent 相等的
               && map.keyEquivalence.equivalent(key, entryKey)) {
+            //表示找到了指定key的 ReferenceEntry
             valueReference = e.getValueReference();
             if (valueReference.isLoading()) {
               createNewEntry = false;
             } else {
               V value = valueReference.get();
               if (value == null) {
+                // collected : 该条目被自动删除，因为它的键或值是垃圾收集的。
+                // 使用 CacheBuilder.weakKeys、CacheBuilder.weakValues 或 CacheBuilder.softValues 时可能会发生这种情况。
                 enqueueNotification(
                     entryKey, hash, value, valueReference.getWeight(), RemovalCause.COLLECTED);
               } else if (map.isExpired(e, now)) {
@@ -2173,14 +2179,15 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
               }
 
               // immediately reuse invalid entries
+              //删除在队列中相应的引用，因为后面要新创建
               writeQueue.remove(e);
               accessQueue.remove(e);
               this.count = newCount; // write-volatile
             }
             break;
           }
-        }
-
+        }//end for
+          //创建新的Entry,但是此时是没有值的
         if (createNewEntry) {
           loadingValueReference = new LoadingValueReference<>();
 
@@ -2202,6 +2209,9 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
           // Synchronizes on the entry to allow failing fast when a recursive load is
           // detected. This may be circumvented when an entry is copied, but will fail fast most
           // of the time.
+          // 在条目上同步以允许在递归加载时快速失败
+          // 检测到。 复制条目时可以避免这种情况，但大多数情况下会很快失败
+          // 的时间。
           synchronized (e) {
             return loadSync(key, hash, loadingValueReference, loader);
           }
@@ -2210,6 +2220,7 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         }
       } else {
         // The entry already exists. Wait for loading.
+        // createNewEntry为false，则表示已经存在LoadingValueReference正在loading条目已经存在。 等待加载。
         return waitForLoadingValue(e, key, valueReference);
       }
     }
@@ -3533,6 +3544,9 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
      * thread acquires the segment lock, immediately after acquiring the lock.
      *
      * <p>Post-condition: expireEntries has been run.
+     *
+     * 在执行写入之前执行例行清理。 这应该在每次写入线程获取段锁时调用，在获取锁之后立即调用。
+     * 后置条件：expireEntries 已运行。
      */
     @GuardedBy("this")
     void preWriteCleanup(long now) {

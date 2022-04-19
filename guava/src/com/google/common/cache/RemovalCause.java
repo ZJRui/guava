@@ -57,6 +57,8 @@ public enum RemovalCause {
    * The entry was removed automatically because its key or value was garbage-collected. This can
    * occur when using {@link CacheBuilder#weakKeys}, {@link CacheBuilder#weakValues}, or {@link
    * CacheBuilder#softValues}.
+   * 该条目被自动删除，因为它的键或值是垃圾收集的。 使用 CacheBuilder.weakKeys、
+   * CacheBuilder.weakValues 或 CacheBuilder.softValues 时可能会发生这种情况。
    */
   COLLECTED {
     @Override
