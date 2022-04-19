@@ -33,6 +33,11 @@ import java.lang.annotation.Target;
  *
  * @author Kevin Bourrillion
  */
+/**
+ * 表明一个公用API的未来版本是受不兼容变更或删除限制的
+ * 拥有这个注释标志的API不受任何兼容性保证
+ *
+ */
 @Retention(RetentionPolicy.CLASS)
 @Target({
   ElementType.ANNOTATION_TYPE,

@@ -98,21 +98,44 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @author Doug Lea ({@code ConcurrentHashMap})
  */
 @SuppressWarnings({
-  "GoodTime", // lots of violations (nanosecond math)
+  "GoodTime", // lots of violations (nanosecond math)很多违规行为（纳秒数学）  should accept a java.time.Duration
   "nullness", // too much trouble for the payoff
 })
 @GwtCompatible(emulated = true)
 // TODO(cpovirk): Annotate for nullness.
 class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
 
+  /**
+   * LocalCache 这个类是衔接  Java标准定义的Map和Guava 实现的Cache之间的桥梁。
+   *
+   * 一方面 实现了 Java中的Map，对外提供Map功能。
+   * 另一方面 LocalCache 内部 有一个内部类LocaLoadingCache ，这个LocalLoadingCache实现了LoadingCache接口也就
+   * 实现了Guava中的Cache接口。
+   *
+   * 注意LocalCache虽然表面上叫做cache，但是他没有实现 Guava中定义的Cache接口。
+   *
+   * 但是LocalCache这个类实现了完整的Map功能，所以本质上他作为缓存的实现。
+   * 我们一般使用Guava 如下使用
+   * LoadingCache cache=CacheBuilder.build( new CacheLoader(){....})
+   * 首先LoadingCache是cache接口的实现类。  CacheBuilder 有两个build 方法，当参数为CacheLoader的时候CacheBuilder的build方法内部
+   * 返回一个 new LocalCache.LocalLoadingCache<>(this, loader);
+   * LocalLoadingCache也是Cache接口的实现类。 LocalLoadingCache 继承自 LocalManualCache ，LocalManualCache内部有一个LocalCache对象
+   * 这个LocalCache本质上是一个实现了Java Map接口的map对象，因此cache的底层实现是依赖了LocalCache这个Map
+   *
+   *
+   */
+
+
   /*
    * The basic strategy is to subdivide the table among Segments, each of which itself is a
    * concurrently readable hash table. The map supports non-blocking reads and concurrent writes
    * across different segments.
+   * 基本策略是在Segments之间细分表，每个segment本身就是一个并发可读的哈希表，该映射支持非阻塞读取和并发写入跨域不同的细分市场。
    *
    * If a maximum size is specified, a best-effort bounding is performed per segment, using a
    * page-replacement algorithm to determine which entries to evict when the capacity has been
    * exceeded.
+   * 如果指定了最大大小，则对么个段执行尽力而为的边界，使用页面替换 算法来确定在容量已经被淘汰时 要淘汰哪些条目。
    *
    * The page replacement algorithm's data structures are kept casually consistent with the map. The
    * ordering of writes to a segment is sequentially consistent. An update to the map and recording
@@ -121,14 +144,24 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
    * penalty of applying the batches is spread across threads so that the amortized cost is slightly
    * higher than performing just the operation without enforcing the capacity constraint.
    *
+   *
+   * 页面替换算法的数据结构和map保持一致。这对段的写入顺序是顺序一致的。map和记录的更新读取次数可能不会立即反映在算法的数据
+   * 结构上。这些结构由锁保护，并分批引用操作以上避免锁竞争。这应用批次的惩罚分散在线程中，因此摊销成本略低高于仅执行
+   * 操作而不执行容量限制。
+   *
+   *
    * This implementation uses a per-segment queue to record a memento of the additions, removals,
    * and accesses that were performed on the map. The queue is drained on writes and when it exceeds
    * its capacity threshold.
+   * 此实现使用每段队列来记录添加、删除以及在map上执行的访问。队列在写入时耗尽，当他通过其容量阈值。
    *
    * The Least Recently Used page replacement algorithm was chosen due to its simplicity, high hit
    * rate, and ability to be implemented with O(1) time complexity. The initial LRU implementation
    * operates per-segment rather than globally for increased implementation simplicity. We expect
    * the cache hit rate to be similar to that of a global LRU algorithm.
+   *
+   * 选择最近最少使用的页面替换算法是因为他简单、命中率高，以及O(1)时间复杂度实现的能力。最初的LRU实现为了提高实现的简单性，
+   * 按段而不是全局运行。我们期待缓存命中率和全局LRU算法相似。
    */
 
   // Constants
@@ -203,10 +236,10 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
   final Weigher<K, V> weigher;
 
   /** How long after the last access to an entry the map will retain that entry. */
-  final long expireAfterAccessNanos;
+  final long expireAfterAccessNanos;//在最后一次访问条目后多久，地图将保留该条目。
 
   /** How long after the last write to an entry the map will retain that entry. */
-  final long expireAfterWriteNanos;
+  final long expireAfterWriteNanos;//在最后一次写入条目后多久，地图将保留该条目。
 
   /** How long after the last write an entry becomes a candidate for refresh. */
   final long refreshNanos;
@@ -222,7 +255,7 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
   final RemovalListener<K, V> removalListener;
 
   /** Measures time in a testable way. */
-  final Ticker ticker;
+  final Ticker ticker;//以可测试的方式测量时间
 
   /** Factory used to create new entries. */
   final EntryFactory entryFactory;
@@ -632,6 +665,7 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
     /**
      * Waits for a value that may still be loading. Unlike get(), this method can block (in the case
      * of FutureValueReference).
+     * 等待可能仍在加载的值。 与 get() 不同，此方法可以阻塞（在 FutureValueReference 的情况下）。
      *
      * @throws ExecutionException if the loading thread throws an exception
      * @throws ExecutionError if the loading thread throws an error
@@ -1764,6 +1798,7 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
   /** Returns true if the entry has expired. */
   boolean isExpired(ReferenceEntry<K, V> entry, long now) {
     checkNotNull(entry);
+
     if (expiresAfterAccess() && (now - entry.getAccessTime() >= expireAfterAccessNanos)) {
       return true;
     }
@@ -1888,6 +1923,9 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
     int threshold;
 
     /** The per-segment table. */
+    /**
+     * 这个table就是 Segment对象的桶数组， 这其实就是Map的桶数组，一个Segment就是一个Map
+     */
     volatile @Nullable AtomicReferenceArray<ReferenceEntry<K, V>> table;
 
     /** The maximum weight of this segment. UNSET_INT if there is no maximum. */
@@ -2023,12 +2061,30 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
           ReferenceEntry<K, V> e = getEntry(key, hash);
           if (e != null) {
             long now = map.ticker.read();
+            /**
+             * 判断是否有活值
+             */
             V value = getLiveValue(e, now);
             if (value != null) {
+              //value 不为null则表示没有过期
               recordRead(e, now);
               statsCounter.recordHits(1);
               return scheduleRefresh(e, key, hash, value, now, loader);
             }
+
+            /**
+             * 如果value==null，则表示没有活值。 可能是值已经过期了，则判断Value是否正在loading，
+             * 如果正在loading则阻塞当前线程等待直到loading结束或者直接返回null。waitForLoadingValue
+             * 那么当前线程是如何 感知到loading结束的呢？
+             * （1）首先 如何判断valueReference 正在被其他线程loading？ 这个参考Segment#refresh(java.lang.Object, int, com.google.common.cache.CacheLoader, boolean)
+             * 方法，refresh方法在进行loading的时候会将 ReferenceEntry的ValueReference设置为LoadingValueReference
+             * （2）当前线程如何感知到其他线程的loading已经 结束？ 当前线程不是触发refresh-loading的线程， 触发refresh-loading的线程能够
+             * 拿到异步Future对象来判断是否执行完成。但是当前线程并不是触发refresh-loading的线程。  这主要 是由于LoadingValueReference在两个线程之间做了桥梁
+             * CacheLoader的reload的结果会通过LoadingValueReference的set方法设置到LoadingValueReference的 futureValue属性中。然后当前线程
+             * 通过ValueReference得到LoadingValueReference 然后通过futureValue的get 来阻塞等待Future的完成。
+             *
+             *
+             */
             ValueReference<K, V> valueReference = e.getValueReference();
             if (valueReference.isLoading()) {
               return waitForLoadingValue(e, key, valueReference);
@@ -2324,10 +2380,18 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         V oldValue,
         long now,
         CacheLoader<? super K, V> loader) {
+      /**
+       * 判断是否需要refresh，且缓存时间已失效，且当前非loading状态，如果是则进行refresh操作，并返回新值，否则直接返回缓存中
+       * 的oldValue;
+       */
       if (map.refreshes()
           && (now - entry.getWriteTime() > map.refreshNanos)
           && !entry.getValueReference().isLoading()) {
         V newValue = refresh(key, hash, loader, true);
+        /**
+         * 返回的newValue为nul的情况： 比如refresh内部触发了refreh，但是这个refresh是异步执行CacheLoader的reload。
+         * 因此当前线程可能拿不到reload的值
+         */
         if (newValue != null) {
           return newValue;
         }
@@ -2343,13 +2407,28 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
      */
     @Nullable
     V refresh(K key, int hash, CacheLoader<? super K, V> loader, boolean checkTime) {
+      /**
+       * 插入loadingValueReference，表示该值正在loading，其他请求根据此判断是需要进行refresh还是返回旧值。
+       * insertLoadingValueReference里有加锁操作，确保只有一个refresh穿透到后端。
+       */
       final LoadingValueReference<K, V> loadingValueReference =
           insertLoadingValueReference(key, hash, checkTime);
       if (loadingValueReference == null) {
         return null;
       }
 
+      /**
+       * 进行refrehs
+       * refresh和expire的区别：refresh执行reload，而expire后会重新执行load，和初始化时一样
+       * 最终会执行   ListenableFuture<V> newValue = loader.reload(key, previousValue);
+       *
+       *
+       * 问题： 这个loadAsync没看出来是如何 异步执行的
+       */
       ListenableFuture<V> result = loadAsync(key, hash, loadingValueReference, loader);
+      /**
+       *
+       */
       if (result.isDone()) {
         try {
           return Uninterruptibles.getUninterruptibly(result);
@@ -2357,6 +2436,16 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
           // don't let refresh exceptions propagate; error was already logged
         }
       }
+      /**
+       * refrehs之后为什么不等待refresh的结果而这列却返回了null。 如果返回null 不就会导致
+       * CacheLoader的load吗？ 那么refresh又有什么意义呢？
+       *
+       * 在cacheloader的load的时候 （实际上还未执行到CacheLoader的loader，而是在lockedGetOrLoad），lockedGetOrLoad方法
+       * 内会对获得的key对应的valueReference进行判断是否缓存值正在loading，如果在loading，则不再进行load操作（通过设置
+       * createNewEntry为false） ，后续会等待获取新值。
+       *
+       * 如果不是在loading，判断是否已经有了新值了（被其他请求load完了），如果是则返回新值。
+       */
       return null;
     }
 
@@ -2368,16 +2457,26 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
     LoadingValueReference<K, V> insertLoadingValueReference(
         final K key, final int hash, boolean checkTime) {
       ReferenceEntry<K, V> e = null;
+      /**
+       * 加锁保证只有一个线程能够 畸形refresh 穿透到后端
+       */
       lock();
       try {
         long now = map.ticker.read();
         preWriteCleanup(now);
 
+        /**
+         * 为当前key创建一个 LoadingValueReference 对象放置到  table数组中。表示这个key正在refresh
+         */
         AtomicReferenceArray<ReferenceEntry<K, V>> table = this.table;
         int index = hash & (table.length() - 1);
+        // 找到桶数组中 指定位置上的元素
         ReferenceEntry<K, V> first = table.get(index);
 
         // Look for an existing entry.
+        /**
+         * 遍历这个桶位置的链表，找到这个键值对
+         */
         for (e = first; e != null; e = e.getNext()) {
           K entryKey = e.getKey();
           if (e.getHash() == hash
@@ -2398,6 +2497,15 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
             ++modCount;
             LoadingValueReference<K, V> loadingValueReference =
                 new LoadingValueReference<>(valueReference);
+            /**
+             * 注意 这里将这个 LoadingValueReference 设置到了 ReferenceEntry 中。
+             * 然后  当某一个线程 从Cache中得不到活值（虽然有值但是值已经过期了）的时候会判断 ValueReference是否正在
+             * loading，这个判断的方式就是通过ReferenceEntry的getValueReference 得到 LoadingValueReference，
+             * 然后调用LoadingValueReference的isLoading方法来判断的，而LoadingValueReference的isLoading方法永远返回true
+             * 因此从而确定ValueReference正在loading
+             *
+             * 这里 在上面找到 链表中的键值对对象ReferenceEntry 这里更新value为 LoadingValueReference表示正在loading
+             */
             e.setValueReference(loadingValueReference);
             return loadingValueReference;
           }
@@ -2704,6 +2812,11 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         return null;
       }
 
+      /**
+       * 判断map中的指定key对应的entry是否过期。
+       * 如果CacheBuilder中配置了refreshAfterWrite，并且当前时间间隔已经超过了这个时间，
+       * 则返回null，导致CacheLoader重新加载值
+       */
       if (map.isExpired(entry, now)) {
         tryExpireEntries(now);
         return null;
@@ -3518,13 +3631,39 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         stopwatch.start();
         V previousValue = oldValue.get();
         if (previousValue == null) {
+          /**
+           * 这里是同步执行load，  因为loadAsync调用了 loadFuture，因此 CacheLoader的loade方法 并没有异步执行
+           */
           V newValue = loader.load(key);
           return set(newValue) ? futureValue : Futures.immediateFuture(newValue);
         }
+        /**
+         * 这里是同步执行load，  因为loadAsync调用了 loadFuture，因此 CacheLoader的reLoade方法 也并没有异步执行
+         * 问题： loadFuture是如何体现异步的？ 从代码上看 CacheLoader的reload和 触发 refresh的线程是同一个线程，
+         * 并没有异步执行reload。  实际上 这里的异步 并不是说CacheLoader.reload 的异步，而是  将reload的值设置到
+         * LoadingValueReference对象的futureValue 对象中这个操作的异步
+         *
+         */
         ListenableFuture<V> newValue = loader.reload(key, previousValue);
         if (newValue == null) {
           return Futures.immediateFuture(null);
         }
+        /**
+         * // 为避免竞争，请确保将刷新的值设置为 loadingValueReference
+         *          // *before* 从缓存查询返回 newValue。
+         *
+         * 在get数据的时候，如果值应存在且没有过期，则判断是否需要进行refresh，如果需要refresh则将链表中的键值对(ReferenceEntry)的
+         * value 更新为LoadingValueReference,同时执行CacheLoader.reload 重新加载数据，然后得到的新值通过异步线程 将新值放置
+         * 到LoadingValueReference的Future对象中。
+         *
+         * transform 方法的主要工作是  （1）第二个参数，定义一个方法，这个方法的含义 就是针对给定的参数newResult，将其通过LoadingValueReference对象的set方法
+         * 设置到LoadingValueReference对象的Future属性中。
+         * （2）第一个参数 是reload得到的新值，在transform的内部我们看到这个newValue实际上被 传递给了第二个参数函数 作为函数入参，因此reload的新值
+         * 被设置到了LoadingValueReference的Future中
+         * （3）第三个参数是一个线程池
+         *
+         *
+         */
         // To avoid a race, make sure the refreshed value is set into loadingValueReference
         // *before* returning newValue from the cache query.
         return transform(
@@ -4825,6 +4964,9 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
   }
 
   static class LocalManualCache<K, V> implements Cache<K, V>, Serializable {
+    /**
+     * LocalCache 是Java标准库的AbstractMap的实现类。 LocalManualCache缓存的实现中 将所有的功能委托给LocalCache这个Map实现。
+     */
     final LocalCache<K, V> localCache;
 
     LocalManualCache(CacheBuilder<? super K, ? super V> builder) {

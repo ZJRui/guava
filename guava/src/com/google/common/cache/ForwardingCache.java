@@ -28,7 +28,7 @@ import javax.annotation.CheckForNull;
  * A cache which forwards all its method calls to another cache. Subclasses should override one or
  * more methods to modify the behavior of the backing cache as desired per the <a
  * href="http://en.wikipedia.org/wiki/Decorator_pattern">decorator pattern</a>.
- *
+ *将其所有方法调用转发到另一个缓存的缓存。 子类应覆盖一个或多个方法，以根据装饰器模式根据需要修改后备缓存的行为。
  * @author Charles Fry
  * @since 10.0
  */

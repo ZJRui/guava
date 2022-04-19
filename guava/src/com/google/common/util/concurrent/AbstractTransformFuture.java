@@ -47,6 +47,15 @@ abstract class AbstractTransformFuture<
   static <I extends @Nullable Object, O extends @Nullable Object> ListenableFuture<O> create(
       ListenableFuture<I> input, Function<? super I, ? extends O> function, Executor executor) {
     checkNotNull(function);
+    /**
+     * 这里创建了一个TransformFuture，这个对象 本身是一个Future+Runnable，
+     * TransaformFuture的run方法会调用其doTransform 方法，这个doTransform 方法会将input作为入参交给function执行。
+     * 也就是将 CacheLoader的reload的值设置到LoadingValueReference的Future属性中。
+     *
+     * input的addListener方法中会将 这个TransformFutre交给 rejectionPropagatingExecutor 返回的线程池执行，最终
+     * 通过异步线程将 reload的newValue设置到LoadingValueReference的Future中。
+     * 感觉这个地方台复杂了
+     */
     TransformFuture<I, O> output = new TransformFuture<>(input, function);
     input.addListener(output, rejectionPropagatingExecutor(executor, output));
     return output;

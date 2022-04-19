@@ -43,6 +43,12 @@ import java.util.concurrent.ExecutionException;
 public interface LoadingCache<K, V> extends Cache<K, V>, Function<K, V> {
 
   /**
+   * 从键到值的半持久映射。 值由缓存自动加载，并存储在缓存中，直到被驱逐或手动失效。 构建实例的常用方法是使用 CacheBuilder。
+   * 这个接口的实现应该是线程安全的，并且可以被多个并发线程安全地访问。
+   * 当作为函数求值时，缓存产生与调用 getUnchecked 相同的结果。
+   */
+
+  /**
    * Returns the value associated with {@code key} in this cache, first loading that value if
    * necessary. No observable state associated with this cache is modified until loading completes.
    *

@@ -61,12 +61,18 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Documented
 @GwtCompatible
+/**
+ * 表明一个类型可能会与 Google Web Toolkit 一起使用.
+ * 如果一个方法使用这个注释,说明这个方法的返回值是 GWT 兼容的
+ *
+ */
 public @interface GwtCompatible {
 
   /**
    * When {@code true}, the annotated type or the type of the method return value is GWT
    * serializable.
    *
+   * 说明一个类型或者方法的返回值是否支持 GWT 序列化
    * @see <a href=
    *     "http://code.google.com/webtoolkit/doc/latest/DevGuideServerCommunication.html#DevGuideSerializableTypes">
    *     Documentation about GWT serialization</a>
@@ -76,6 +82,8 @@ public @interface GwtCompatible {
   /**
    * When {@code true}, the annotated type is emulated in GWT. The emulated source (also known as
    * super-source) is different from the implementation used by the JVM.
+   * * 说明一个类型是否在 GWT 被模拟.
+   *      * 被模拟的源(父源)和JVM的实现不一样
    *
    * @see <a href=
    *     "http://code.google.com/webtoolkit/doc/latest/DevGuideOrganizingProjects.html#DevGuideModules">

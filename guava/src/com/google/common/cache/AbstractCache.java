@@ -40,6 +40,17 @@ import java.util.concurrent.ExecutionException;
 @GwtCompatible
 @ElementTypesAreNonnullByDefault
 public abstract class AbstractCache<K, V> implements Cache<K, V> {
+  /**
+   * AbstractCache：抽象类，实现Cache接口。其中批量操作都是循环执行单次行为，而单次行为都没有具体定义。
+   *
+   * 此类提供 Cache 接口的骨架实现，以最大限度地减少实现此接口所需的工作量。
+   * 要实现缓存，程序员只需要扩展这个类并提供 put 和 getIfPresent 方法的实现。
+   * getAllPresent 是根据 getIfPresent 实现的； putAll 是用 put 来实现的，
+   * invalidateAll(Iterable) 是用 invalidate 来实现的。 cleanUp 方法是无操作的。
+   * 所有其他方法都会引发 UnsupportedOperationException。
+   *
+   *
+   */
 
   /** Constructor for use by subclasses. */
   protected AbstractCache() {}

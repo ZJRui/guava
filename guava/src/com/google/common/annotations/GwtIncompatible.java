@@ -34,6 +34,11 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
 @Documented
 @GwtCompatible
+/**
+ * 说明一个方法可能无法与 GWT 一起使用
+ * 他只能用于被 @GwtCompatible 标志的类的字段,方法和内部类
+ *
+ */
 public @interface GwtIncompatible {
   /**
    * Describes why the annotated element is incompatible with GWT. Since this is generally due to a
