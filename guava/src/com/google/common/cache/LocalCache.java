@@ -3683,6 +3683,9 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
         return transform(
             newValue,
             newResult -> {
+              /**
+               *  将数据设置到future中
+               */
               LoadingValueReference.this.set(newResult);
               return newResult;
             },

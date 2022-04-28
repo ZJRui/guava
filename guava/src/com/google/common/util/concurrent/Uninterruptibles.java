@@ -235,6 +235,10 @@ public final class Uninterruptibles {
     try {
       while (true) {
         try {
+          /**
+           * 合适被唤醒？ future何时被设置值？ 参考 LoadingValueReference#loadFuture(java.lang.Object, com.google.common.cache.CacheLoader)
+           * 方法
+           */
           return future.get();
         } catch (InterruptedException e) {
           interrupted = true;
