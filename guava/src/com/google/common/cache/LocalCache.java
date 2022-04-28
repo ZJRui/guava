@@ -2470,6 +2470,14 @@ class LocalCache<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> 
       ReferenceEntry<K, V> e = null;
       /**
        * 加锁保证只有一个线程能够 畸形refresh 穿透到后端
+       *
+       * 缓存击穿：缓存没有，数据库可能有，同一个key并发请求。（一般是数据过期时间到了导致缓存中没有数据，
+       * 这种情况下可以通过异步定时任务定时更新热点key并重新设置过期时间； 另外一个方式是使用互斥锁，
+       * 当一个线程在缓存中没有查询到的话就加锁，其他线程阻塞等待，这个过程类似CacheLoader，Guava中就是 当多个
+       * 线程发现缓存中没有key的时候 就会只使用一个线程执行cacheLoader）。当缓存中且没有获取到锁 没有资格尝试加载数据的时
+       * 候就返回一个Future，  线程调用Future.get阻塞等待，直到加载
+       *
+       *
        */
       lock();
       try {
