@@ -438,6 +438,12 @@ public final class CacheBuilder<K, V> {
    * <p>Note that future implementations may abandon segment locking in favor of more advanced
    * concurrency controls.
    *
+   *
+   * // 并发级别，可以简单理解为Map中的segment的数量，也就是table数组的长度， ConcurrentHashmap 中每一个Segment使用一个锁
+   * concurrentLevel=1 表示只有一个Segment，所有的缓存都放入同一个segment，update cache需要获取segment 写锁。从而控制并发级别
+   *
+   *
+   *
    * @return this {@code CacheBuilder} instance (for chaining)
    * @throws IllegalArgumentException if {@code concurrencyLevel} is nonpositive
    * @throws IllegalStateException if a concurrency level was already set
@@ -471,6 +477,13 @@ public final class CacheBuilder<K, V> {
    * cache. This can be useful in testing, or to disable caching temporarily.
    *
    * <p>This feature cannot be used in conjunction with {@link #maximumWeight}.
+   *
+   *
+   * 缓存中最大的缓存 entry的数量，  这里仅仅时限制了entry的数量，没有限制 entry或者整个cache 占用的内存大小。
+   * 如果对内存比较敏感， 那么可以通过 将value转为byte 数组，使用byte数组的长度作为weight 计算 权重，作为淘汰entry的指标
+   * 如果您有办法测量缓存特定对象的相对“成本”，则可以指定 maximumWeight()。 例如，如果您正在缓存 byte[] 实例，
+   * 您可以使用它们的长度作为权重，这将大致反映它们的内存占用。 对于其他类型，您需要确定“成本”的适当代理概念
+   * https://stackoverflow.com/questions/32321836/guava-cachebuilder-maximumsize
    *
    * @param maximumSize the maximum size of the cache
    * @return this {@code CacheBuilder} instance (for chaining)
