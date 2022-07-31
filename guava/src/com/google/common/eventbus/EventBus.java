@@ -266,6 +266,16 @@ public class EventBus {
     if (eventSubscribers.hasNext()) {
       dispatcher.dispatch(event, eventSubscribers);
     } else if (!(event instanceof DeadEvent)) {
+      /**
+       * DeadEvent
+       * 它是一个实体对象，封装了没有订阅者的事件。DeadEvent由两个属性组成：
+       * source：事件源（通常指发布事件的EventBus对象）
+       * event：事件对象
+       * DeadEvent对象的产生：当通过某个EventBus的实例发布一个事件的时候，没有找到事件订阅者并
+       * 且它本身又不是一个DeadEvent的实例时，将由EventBus构建一个DeadEvent类的实例。
+       * ————————————————
+       *
+       */
       // the event had no subscribers and was not itself a DeadEvent
       post(new DeadEvent(this, event));
     }

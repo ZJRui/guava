@@ -37,6 +37,12 @@ public class StringCatcher {
     events.add(string);
   }
 
+  // @Subscribe
+  // public void hereHaveAString2(@Nullable String string) {
+  //   System.out.println(string);
+  // }
+
+
   public void methodWithoutAnnotation(@Nullable String string) {
     Assert.fail("Event bus must not call methods without @Subscribe!");
   }

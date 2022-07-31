@@ -65,6 +65,34 @@ class Subscriber {
 
   /** Dispatches {@code event} to this subscriber using the proper executor. */
   final void dispatchEvent(Object event) {
+    /**
+     *
+     * Subscriber的create方法在实现中，它会先判断该处理器方法上是否被标注有@AllowConcurrentEvents注解，
+     * 如果有，则实例化Subscriber类的一个实例；如果没有，则不允许eventbus在多线程的环境中调用处理器方法（），
+     * 所以这里专门为此提供了一个同步的订阅者对象：SynchronizedSubscriber来保证线程安全。
+     *
+     * 什么意思呢？ 如果线程A发布一个事件，线程B 也发布一个事件,同一个Subcirber1 接收到两个事件 。 这两个事件
+     *
+     * （1）线程A 通过Eventbug.post -->
+     * 都会通过Eventbug.post -->LegacyAsyncDispatcher#dispatch(java.lang.Object, java.util.Iterator)，注意这里 会先找到事件的订阅者Subcirber1 --->这里的dispatchEvent
+     * 然后dispatchEvent 中又将 Subcirber1 的监听方法 保证成任务 提交到线程池中。
+     *
+     * （2）线程B 也 类似的发布另外一个事件，将 Subcirber1 的监听方法 包装成任务提交到线程池中。
+     *
+     * 那么线程池中 我们是否允许 多个线程 并发 执行 同一个Subcirber1 对象的监听方法呢？ 普通的Subscriber 是允许的， 在SynchronieSubscriber 中会对当前的Subscriber对象加锁，也就是
+     * 不允许多个线程同时使用同一个Subscriber并发消费多个事件对象。
+     * ————————————————
+     *
+     *
+     * 它调用一个多线程执行器来执行事件处理器方法。
+     * 另一个方法：invokeSubscriberMethod以反射的方式调用事件处理器方法。
+     * 另外，该类对Object的equals方法进行了override并标识为final。主要是为了避免同一个对象对某个事件进行重复订阅，
+     * 在SubscriberRegistry中会有相应的判等操作。当然这里Subscriber也override并final了hashCode方法。这是最佳实践，
+     * 不必多谈，如果不了解的可以去看看《Effective Java》。
+     * 该类还有个内部类，就是我们上面谈到的SynchronizedSubscriber，它继承了Subscriber，与Subscriber唯一的不同就是
+     * 在invokeSubscriberMethod的执行上做了同步。
+     *
+     */
     executor.execute(
         () -> {
           try {
@@ -82,6 +110,9 @@ class Subscriber {
   @VisibleForTesting
   void invokeSubscriberMethod(Object event) throws InvocationTargetException {
     try {
+      //    // 通过反射直接执行订阅者中方法
+      //还有就是如果没有添加注解 AllowConcurrentEvents，就会走SynchronizedSubscriber中invokeSubscriberMethod()逻辑，
+      // SynchronizedSubscriber 添加了synchronized关键字，不支持并发执行。
       method.invoke(target, checkNotNull(event));
     } catch (IllegalArgumentException e) {
       throw new Error("Method rejected target/argument: " + event, e);
@@ -122,6 +153,7 @@ class Subscriber {
    * AllowConcurrentEvents} annotation.
    */
   private static boolean isDeclaredThreadSafe(Method method) {
+    //    // 如果有AllowConcurrentEvents注解，则返回true
     return method.getAnnotation(AllowConcurrentEvents.class) != null;
   }
 
@@ -139,6 +171,9 @@ class Subscriber {
     @Override
     void invokeSubscriberMethod(Object event) throws InvocationTargetException {
       synchronized (this) {
+        // SynchronizedSubscriber不支持并发，这里用synchronized修饰，所有执行都串行化执行
+        //还有就是如果没有添加注解 AllowConcurrentEvents，就会走SynchronizedSubscriber中invokeSubscriberMethod()逻辑，
+        // SynchronizedSubscriber 添加了synchronized关键字，不支持并发执行。
         super.invokeSubscriberMethod(event);
       }
     }

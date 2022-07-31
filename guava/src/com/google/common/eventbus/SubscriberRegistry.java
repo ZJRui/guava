@@ -162,6 +162,15 @@ final class SubscriberRegistry {
    * Returns all subscribers for the given listener grouped by the type of event they subscribe to.
    */
   private Multimap<Class<?>, Subscriber> findAllSubscribers(Object listener) {
+    /**
+     * register/unregister方法都调用了findAllSubscribers方法，它有一些特别之处，这里需要单独拎出来提一下。
+     * findAllSubscribers用于查找事件类型以及事件处理器的对应关系。查找注解需要涉及到反射，通过反射来获取标注在方法上的
+     * 注解。因为Guava针对EventBus的注册采取的是“隐式契约”而非接口这种“显式契约”。而类与接口是存在继承关系的，所有很
+     * 有可能某个订阅者其父类（或者父类实现的某个接口）也订阅了某个事件。因此这里的查找需要顺着继承链向上查找父类的方法是
+     * 否也被注解标注，代码实现
+     * 同样涉及这个问题的，还有根据事件类型获取Subscriber实例的方法：getSubscribers。
+     * ————————————————
+     */
     Multimap<Class<?>, Subscriber> methodsInListener = HashMultimap.create();
     Class<?> clazz = listener.getClass();
     for (Method method : getAnnotatedMethods(clazz)) {

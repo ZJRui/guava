@@ -45,7 +45,14 @@ public class AsyncEventBusTest extends TestCase {
     StringCatcher catcher = new StringCatcher();
     bus.register(catcher);
 
+    //我们发布事件，但我们的执行者将不会交付它，直到指示。
     // We post the event, but our Executor will not deliver it until instructed.
+    /**
+     * 这里的post 最终会执行 com.google.common.eventbus.Subscriber#dispatchEvent
+     * 在dispatchEvent 中 使用 EventBus的executor执行  提交一个任务 ，这个任务的内部逻辑就是 调用 listener的方法告知事件发生。
+     * 这个任务被提交到 EventBus的线程池 FakeExecutor 中，而FakeExecutor 的执行提交任务 是将
+     * 任务放置到 FakeExecutor的 tasks list表中
+     */
     bus.post(EVENT);
 
     List<String> events = catcher.getEvents();
@@ -55,6 +62,24 @@ public class AsyncEventBusTest extends TestCase {
     List<Runnable> tasks = executor.getTasks();
     assertEquals("One event dispatch task should be queued.", 1, tasks.size());
 
+    /**
+     *  我们从线程池的test列表中取出 任务。 这个任务就是  invokeSubscriberMethod(event);
+     *
+     *    final void dispatchEvent(Object event) {
+     *     executor.execute(
+     *         () -> {
+     *           try {
+     *             invokeSubscriberMethod(event);
+     *           } catch (InvocationTargetException e) {
+     *             bus.handleSubscriberException(e.getCause(), context(event));
+     *           }
+     *         });
+     *   }
+     *
+     *   因此run 最终会执行  invokeSubscriberMethod(event);
+     *
+     *
+     */
     tasks.get(0).run();
 
     assertEquals("One event should be delivered.", 1, events.size());

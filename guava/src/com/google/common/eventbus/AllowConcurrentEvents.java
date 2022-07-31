@@ -31,4 +31,11 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @ElementTypesAreNonnullByDefault
-public @interface AllowConcurrentEvents {}
+@SuppressWarnings("all")
+public @interface AllowConcurrentEvents {
+    /**
+     * 在我们执行register()方法的时候，会为每一个订阅者构造一个Subscriber对象，
+     * 如果配置了@AllowConcurrentEvents注解，就会为它配置一个允许并发的Subscriber对象。
+     *
+     */
+}
